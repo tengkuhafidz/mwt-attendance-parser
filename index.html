@@ -66,6 +66,12 @@
       color: #64748b;
       margin-bottom: 32px;
     }
+
+    .school-logo {
+      width: 120px;
+      height: auto;
+      margin-bottom: 16px;
+    }
     
     .upload-area {
       display: flex;
@@ -84,7 +90,8 @@
       box-sizing: border-box;
     }
     
-    .upload-area:hover {
+    .upload-area:hover,
+    .upload-area.drag-over {
       border-color: #3b82f6;
       background: #f0f7ff;
     }
@@ -590,7 +597,8 @@
 <body>
   <div class="container">
     <div id="upload-section" class="upload-section">
-      <h1 class="upload-title">Madrasah Wak Tanjong Attendance Parser</h1>
+      <img src="https://mwti.edu.sg/wp-content/uploads/2019/07/madrasah_wak_tanjong_al_islamiah_transparant.png" alt="MWTI Logo" class="school-logo">
+      <h1 class="upload-title">Attendance Parser</h1>
       <p class="upload-subtitle">Upload your attendance record from Qirom in CSV format to view the report</p>
       <label class="upload-area" for="file-input">
         <svg class="upload-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -1044,10 +1052,9 @@
     }
     
     // Event listeners
-    document.getElementById('file-input').addEventListener('change', (e) => {
-      const file = e.target.files[0];
-      if (!file) return;
-      
+    function handleFile(file) {
+      if (!file || !file.name.endsWith('.csv')) return;
+
       Papa.parse(file, {
         header: true,
         skipEmptyLines: true,
@@ -1061,6 +1068,30 @@
           renderClassSummary();
         }
       });
+    }
+
+    document.getElementById('file-input').addEventListener('change', (e) => {
+      handleFile(e.target.files[0]);
+    });
+
+    // Drag and drop handlers
+    const uploadArea = document.querySelector('.upload-area');
+
+    uploadArea.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      uploadArea.classList.add('drag-over');
+    });
+
+    uploadArea.addEventListener('dragleave', (e) => {
+      e.preventDefault();
+      uploadArea.classList.remove('drag-over');
+    });
+
+    uploadArea.addEventListener('drop', (e) => {
+      e.preventDefault();
+      uploadArea.classList.remove('drag-over');
+      const file = e.dataTransfer.files[0];
+      handleFile(file);
     });
     
     document.getElementById('sort-by').addEventListener('change', renderTable);
