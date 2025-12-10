@@ -1,0 +1,1037 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Attendance Report</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #f5f7fa;
+      min-height: 100vh;
+      color: #1a1a2e;
+    }
+    
+    .container {
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+    
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 24px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid #e2e8f0;
+    }
+    
+    h1 {
+      font-size: 1.5rem;
+      font-weight: 600;
+      color: #1a1a2e;
+    }
+    
+    .header-info {
+      font-size: 0.875rem;
+      color: #64748b;
+    }
+    
+    /* Upload Section */
+    .upload-section {
+      background: white;
+      border-radius: 12px;
+      padding: 48px 32px;
+      text-align: center;
+      border: 1px solid #e2e8f0;
+    }
+    
+    .upload-area {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      border: 2px dashed #d1d5db;
+      border-radius: 10px;
+      padding: 40px 32px;
+      cursor: pointer;
+      transition: all 0.2s;
+      width: 100%;
+      max-width: 340px;
+      margin: 0 auto;
+      background: #f9fafb;
+      box-sizing: border-box;
+    }
+    
+    .upload-area:hover {
+      border-color: #3b82f6;
+      background: #f0f7ff;
+    }
+    
+    .upload-icon {
+      display: block;
+      width: 40px;
+      height: 40px;
+      margin-bottom: 16px;
+      color: #9ca3af;
+      flex-shrink: 0;
+    }
+    
+    .upload-area p {
+      color: #6b7280;
+      margin: 0 0 6px 0;
+      font-size: 0.95rem;
+    }
+    
+    .upload-area p:last-child {
+      margin-bottom: 0;
+    }
+    
+    .upload-hint {
+      font-size: 0.8rem;
+      color: #9ca3af !important;
+    }
+    
+    .upload-area .browse {
+      color: #2563eb;
+      font-weight: 500;
+    }
+    
+    input[type="file"] {
+      display: none;
+    }
+    
+    /* Stats Grid */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 12px;
+      margin-bottom: 24px;
+    }
+    
+    .stat-card {
+      background: white;
+      border-radius: 10px;
+      padding: 16px;
+      border: 2px solid transparent;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    
+    .stat-card:hover {
+      border-color: #e2e8f0;
+    }
+    
+    .stat-card.active {
+      border-color: #3b82f6;
+      background: #eff6ff;
+    }
+    
+    .stat-card .stat-value {
+      font-size: 1.75rem;
+      font-weight: 700;
+      line-height: 1.2;
+    }
+    
+    .stat-card .stat-percent {
+      font-size: 0.8rem;
+      color: #64748b;
+      font-weight: 500;
+    }
+    
+    .stat-card .stat-label {
+      font-size: 0.75rem;
+      color: #64748b;
+      margin-top: 4px;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+    }
+    
+    .stat-card.total .stat-value { color: #475569; }
+    .stat-card.ontime .stat-value { color: #16a34a; }
+    .stat-card.late .stat-value { color: #ea580c; }
+    .stat-card.critical .stat-value { color: #dc2626; }
+    
+    /* View Tabs */
+    .view-tabs {
+      display: flex;
+      gap: 4px;
+      margin-bottom: 16px;
+      background: #e2e8f0;
+      padding: 4px;
+      border-radius: 8px;
+      width: fit-content;
+    }
+    
+    .view-tab {
+      padding: 8px 20px;
+      border: none;
+      background: transparent;
+      border-radius: 6px;
+      font-size: 0.875rem;
+      font-weight: 500;
+      color: #64748b;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    
+    .view-tab:hover {
+      color: #475569;
+    }
+    
+    .view-tab.active {
+      background: white;
+      color: #1a1a2e;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+    
+    /* Controls */
+    .controls {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 16px;
+      flex-wrap: wrap;
+    }
+    
+    .control-group {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    
+    .control-group label {
+      font-size: 0.875rem;
+      color: #64748b;
+    }
+    
+    select, .search-input {
+      padding: 8px 12px;
+      border: 1px solid #e2e8f0;
+      border-radius: 6px;
+      font-size: 0.875rem;
+      background: white;
+      color: #1a1a2e;
+    }
+    
+    select:focus, .search-input:focus {
+      outline: none;
+      border-color: #3b82f6;
+      box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    }
+    
+    .search-input {
+      flex: 1;
+      min-width: 180px;
+    }
+    
+    .print-btn {
+      margin-left: auto;
+      padding: 8px 16px;
+      background: white;
+      border: 1px solid #e2e8f0;
+      border-radius: 6px;
+      font-size: 0.875rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      color: #475569;
+    }
+    
+    .print-btn:hover {
+      background: #f8fafc;
+    }
+    
+    /* Table */
+    .table-container {
+      background: white;
+      border-radius: 10px;
+      border: 1px solid #e2e8f0;
+      overflow: hidden;
+    }
+    
+    .table-wrapper {
+      overflow-x: auto;
+    }
+    
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    
+    th {
+      background: #f8fafc;
+      padding: 12px 16px;
+      text-align: left;
+      font-weight: 600;
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: #64748b;
+      border-bottom: 1px solid #e2e8f0;
+    }
+    
+    td {
+      padding: 12px 16px;
+      border-bottom: 1px solid #f1f5f9;
+    }
+    
+    tr:last-child td {
+      border-bottom: none;
+    }
+    
+    .clickable-row {
+      cursor: pointer;
+    }
+    
+    .clickable-row:hover {
+      background: #f8fafc;
+    }
+    
+    .student-name {
+      font-weight: 500;
+      color: #1a1a2e;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    
+    .expand-icon {
+      color: #94a3b8;
+      font-size: 0.7rem;
+    }
+    
+    .student-class {
+      font-size: 0.8rem;
+      color: #94a3b8;
+      margin-top: 2px;
+    }
+    
+    .count-badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 28px;
+      height: 28px;
+      padding: 0 10px;
+      border-radius: 14px;
+      font-weight: 600;
+      font-size: 0.875rem;
+    }
+    
+    .count-badge.high { background: #fef2f2; color: #dc2626; }
+    .count-badge.medium { background: #fff7ed; color: #ea580c; }
+    .count-badge.low { background: #f0fdf4; color: #16a34a; }
+    .count-badge.zero { background: #f8fafc; color: #94a3b8; }
+    
+    .attendance-text {
+      font-size: 0.875rem;
+      color: #475569;
+      font-weight: 500;
+    }
+    
+    /* Details Row */
+    .details-row {
+      background: #f8fafc;
+    }
+    
+    .details-content {
+      padding: 16px;
+    }
+    
+    .details-summary {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 16px;
+      flex-wrap: wrap;
+    }
+    
+    .summary-tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 12px;
+      border-radius: 6px;
+      font-size: 0.8rem;
+      font-weight: 500;
+    }
+    
+    .summary-tag.slight { background: #f0fdf4; color: #16a34a; }
+    .summary-tag.moderate { background: #fefce8; color: #ca8a04; }
+    .summary-tag.very-late { background: #fef2f2; color: #dc2626; }
+    .summary-tag.absent { background: #f1f5f9; color: #64748b; }
+    
+    .details-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+      gap: 8px;
+    }
+    
+    .detail-item {
+      display: flex;
+      justify-content: space-between;
+      padding: 8px 12px;
+      background: white;
+      border-radius: 6px;
+      font-size: 0.8rem;
+      border-left: 3px solid #e2e8f0;
+    }
+    
+    .detail-item.slightly-late { border-left-color: #22c55e; }
+    .detail-item.moderately-late { border-left-color: #eab308; }
+    .detail-item.very-late { border-left-color: #ef4444; }
+    .detail-item.absent, .detail-item.excused { border-left-color: #94a3b8; }
+    
+    .detail-date { color: #64748b; }
+    .detail-time { font-weight: 500; color: #1a1a2e; }
+    
+    /* Legend */
+    .legend {
+      display: flex;
+      gap: 16px;
+      padding: 12px 16px;
+      background: #f8fafc;
+      border-top: 1px solid #e2e8f0;
+      font-size: 0.75rem;
+      color: #64748b;
+      flex-wrap: wrap;
+    }
+    
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    
+    .legend-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 2px;
+    }
+    
+    .legend-dot.green { background: #22c55e; }
+    .legend-dot.yellow { background: #eab308; }
+    .legend-dot.red { background: #ef4444; }
+    .legend-dot.grey { background: #94a3b8; }
+    
+    .no-data {
+      text-align: center;
+      padding: 48px;
+      color: #94a3b8;
+    }
+    
+    /* Rank badges */
+    .rank {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      font-size: 0.75rem;
+      font-weight: 600;
+      background: #f1f5f9;
+      color: #64748b;
+    }
+    
+    .rank.rank-gold {
+      background: linear-gradient(135deg, #fbbf24, #f59e0b);
+      color: white;
+    }
+    
+    .rank.rank-silver {
+      background: linear-gradient(135deg, #cbd5e1, #94a3b8);
+      color: white;
+    }
+    
+    .rank.rank-bronze {
+      background: linear-gradient(135deg, #d97706, #b45309);
+      color: white;
+    }
+    
+    /* Leaderboard sections */
+    .leaderboard-section {
+      margin-bottom: 24px;
+    }
+    
+    .leaderboard-section:last-child {
+      margin-bottom: 0;
+    }
+    
+    .leaderboard-title {
+      font-size: 1rem;
+      font-weight: 600;
+      color: #1a1a2e;
+      margin-bottom: 12px;
+    }
+    
+    .percent-label {
+      font-size: 0.8rem;
+      color: #64748b;
+      margin-left: 6px;
+    }
+    
+    /* Mobile */
+    @media (max-width: 768px) {
+      .container { padding: 12px; }
+      
+      header { 
+        flex-direction: column; 
+        align-items: flex-start; 
+        gap: 4px;
+      }
+      
+      .stats-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 8px;
+      }
+      
+      .stat-card {
+        padding: 12px;
+      }
+      
+      .stat-card .stat-value {
+        font-size: 1.35rem;
+      }
+      
+      .stat-card .stat-percent {
+        font-size: 0.7rem;
+      }
+      
+      .stat-card .stat-label {
+        font-size: 0.65rem;
+      }
+      
+      .view-tabs {
+        width: 100%;
+      }
+      
+      .view-tab {
+        flex: 1;
+        text-align: center;
+      }
+      
+      .controls {
+        flex-direction: column;
+        gap: 8px;
+      }
+      
+      .control-group {
+        width: 100%;
+      }
+      
+      .control-group select,
+      .search-input {
+        flex: 1;
+      }
+      
+      .print-btn { display: none; }
+      
+      th, td {
+        padding: 10px 12px;
+      }
+      
+      .details-grid {
+        grid-template-columns: 1fr;
+      }
+      
+      .legend {
+        gap: 10px;
+      }
+    }
+    
+    @media print {
+      body { background: white; }
+      .upload-section, .controls, .print-btn { display: none; }
+      .stat-card { border: 1px solid #e2e8f0; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div id="upload-section" class="upload-section">
+      <label class="upload-area" for="file-input">
+        <svg class="upload-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+        </svg>
+        <p>Drop CSV file here or <span class="browse">browse</span></p>
+        <p class="upload-hint">Supports attendance reports with time data</p>
+      </label>
+      <input type="file" id="file-input" accept=".csv">
+    </div>
+    
+    <div id="results" style="display: none;">
+      <header>
+        <h1>Attendance Report</h1>
+        <div class="header-info" id="header-info"></div>
+      </header>
+      
+      <div class="stats-grid" id="stats-grid"></div>
+      
+      <div class="view-tabs">
+        <button class="view-tab active" data-view="students" onclick="setView('students')">Students</button>
+        <button class="view-tab" data-view="classes" onclick="setView('classes')">By Class</button>
+      </div>
+      
+      <div id="students-view">
+      <div class="controls">
+        <div class="control-group">
+          <label>Class:</label>
+          <select id="filter-class">
+            <option value="all">All Classes</option>
+          </select>
+        </div>
+        <div class="control-group">
+          <label>Sort:</label>
+          <select id="sort-by">
+            <option value="totalSevere">Lateness</option>
+            <option value="name">Name</option>
+            <option value="class">Class</option>
+          </select>
+        </div>
+        <input type="text" class="search-input" id="search" placeholder="Search student...">
+        <button class="print-btn" onclick="window.print()">
+          <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+          </svg>
+          Print
+        </button>
+      </div>
+      
+      <div class="table-container">
+        <div class="table-wrapper">
+          <table id="data-table">
+            <thead>
+              <tr>
+                <th>Student</th>
+                <th style="text-align: right;">Attendance</th>
+                <th style="text-align: right;">Late Count</th>
+              </tr>
+            </thead>
+            <tbody id="table-body"></tbody>
+          </table>
+        </div>
+        <div class="legend">
+          <div class="legend-item"><span class="legend-dot green"></span> Slight (7:35-7:40)</div>
+          <div class="legend-item"><span class="legend-dot yellow"></span> Moderate (7:40-7:50)</div>
+          <div class="legend-item"><span class="legend-dot red"></span> Very Late (&gt;7:50)</div>
+          <div class="legend-item"><span class="legend-dot grey"></span> Absent</div>
+          <div class="legend-item" style="margin-left: auto; font-style: italic;">Click row for details</div>
+        </div>
+      </div>
+      </div>
+      
+      <div id="classes-view" style="display: none;">
+        <div class="leaderboard-section">
+          <h3 class="leaderboard-title">🏆 Primary School</h3>
+          <div class="table-container">
+            <div class="table-wrapper">
+              <table>
+                <thead>
+                  <tr>
+                    <th style="width: 40px;">#</th>
+                    <th>Class</th>
+                    <th style="text-align: right;">Students</th>
+                    <th style="text-align: right;">Students Late Before</th>
+                  </tr>
+                </thead>
+                <tbody id="primary-class-body"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+        
+        <div class="leaderboard-section">
+          <h3 class="leaderboard-title">🏆 Secondary / Others</h3>
+          <div class="table-container">
+            <div class="table-wrapper">
+              <table>
+                <thead>
+                  <tr>
+                    <th style="width: 40px;">#</th>
+                    <th>Class</th>
+                    <th style="text-align: right;">Students</th>
+                    <th style="text-align: right;">Students Late Before</th>
+                  </tr>
+                </thead>
+                <tbody id="secondary-class-body"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let processedData = null;
+    let currentFilter = 'all'; // 'all', 'ontime', 'late', 'critical'
+    let expandedRows = new Set();
+    
+    function parseTime(timeStr) {
+      if (!timeStr || timeStr.toString().trim().toUpperCase() === 'NA' || timeStr.toString().trim() === '') {
+        return null;
+      }
+      const str = timeStr.toString().trim();
+      if (str.toLowerCase() === 'present') return 0;
+      if (str.toLowerCase().includes('absent')) return 'excused';
+      
+      const parts = str.split(':');
+      if (parts.length >= 2) {
+        const hours = parseInt(parts[0], 10);
+        const minutes = parseInt(parts[1], 10);
+        if (!isNaN(hours) && !isNaN(minutes)) {
+          return hours * 60 + minutes;
+        }
+      }
+      return null;
+    }
+    
+    function classifyTime(timeInMinutes) {
+      if (timeInMinutes === null) return 'absent';
+      if (timeInMinutes === 'excused') return 'excused';
+      
+      const t735 = 7 * 60 + 35;
+      const t740 = 7 * 60 + 40;
+      const t750 = 7 * 60 + 50;
+      
+      if (timeInMinutes > t750) return 'very-late';
+      if (timeInMinutes > t740) return 'moderately-late';
+      if (timeInMinutes > t735) return 'slightly-late';
+      return 'on-time';
+    }
+    
+    function processData(csvData) {
+      if (!csvData || csvData.length === 0) return null;
+      
+      const headers = Object.keys(csvData[0]);
+      const idCol = headers[0];
+      const nameCol = headers[1];
+      const classCol = headers[2];
+      const dateColumns = headers.slice(3);
+      
+      const holidays = new Set();
+      dateColumns.forEach(dateCol => {
+        const allNA = csvData.every(row => {
+          const val = row[dateCol];
+          return !val || val.toString().trim().toUpperCase() === 'NA' || val.toString().trim() === '';
+        });
+        if (allNA) holidays.add(dateCol);
+      });
+      
+      const validDates = dateColumns.filter(d => !holidays.has(d));
+      
+      const students = csvData.map(row => {
+        const id = row[idCol];
+        const name = row[nameCol];
+        const studentClass = row[classCol];
+        
+        let onTime = 0, slightlyLate = 0, moderatelyLate = 0, veryLate = 0, absent = 0, excused = 0;
+        const details = [];
+        
+        validDates.forEach(dateCol => {
+          const timeStr = row[dateCol];
+          const timeMinutes = parseTime(timeStr);
+          const status = classifyTime(timeMinutes);
+          
+          switch(status) {
+            case 'on-time': onTime++; break;
+            case 'slightly-late': slightlyLate++; break;
+            case 'moderately-late': moderatelyLate++; break;
+            case 'very-late': veryLate++; break;
+            case 'absent': absent++; break;
+            case 'excused': excused++; break;
+          }
+          
+          if (status !== 'on-time') {
+            details.push({ date: dateCol, time: timeStr, status });
+          }
+        });
+        
+        const totalSevere = moderatelyLate + veryLate;
+        
+        return {
+          id, name, class: studentClass,
+          onTime, slightlyLate, moderatelyLate, veryLate, absent, excused,
+          totalSevere, details, totalDays: validDates.length
+        };
+      });
+      
+      const classes = [...new Set(students.map(s => s.class))].sort();
+      
+      return { 
+        students, 
+        holidays: holidays.size, 
+        validDays: validDates.length, 
+        classes,
+        totalStudents: students.length
+      };
+    }
+    
+    function renderStats() {
+      const stats = document.getElementById('stats-grid');
+      const total = processedData.totalStudents;
+      const onTime = processedData.students.filter(s => s.totalSevere === 0 && s.slightlyLate === 0).length;
+      const withLateness = processedData.students.filter(s => s.totalSevere > 0).length;
+      const critical = processedData.students.filter(s => s.totalSevere > 3).length;
+      
+      const pct = (n) => total > 0 ? Math.round((n / total) * 100) : 0;
+      
+      stats.innerHTML = `
+        <div class="stat-card total ${currentFilter === 'all' ? 'active' : ''}" onclick="setFilter('all')">
+          <div class="stat-value">${total}</div>
+          <div class="stat-label">Total Students</div>
+        </div>
+        <div class="stat-card ontime ${currentFilter === 'ontime' ? 'active' : ''}" onclick="setFilter('ontime')">
+          <div class="stat-value">${onTime} <span class="stat-percent">(${pct(onTime)}%)</span></div>
+          <div class="stat-label">Always On Time</div>
+        </div>
+        <div class="stat-card late ${currentFilter === 'late' ? 'active' : ''}" onclick="setFilter('late')">
+          <div class="stat-value">${withLateness} <span class="stat-percent">(${pct(withLateness)}%)</span></div>
+          <div class="stat-label">With Lateness</div>
+        </div>
+        <div class="stat-card critical ${currentFilter === 'critical' ? 'active' : ''}" onclick="setFilter('critical')">
+          <div class="stat-value">${critical} <span class="stat-percent">(${pct(critical)}%)</span></div>
+          <div class="stat-label">Late &gt;3 Times</div>
+        </div>
+      `;
+      
+      document.getElementById('header-info').textContent = `${processedData.validDays} school days analyzed`;
+    }
+    
+    function setFilter(filter) {
+      currentFilter = filter;
+      renderStats();
+      renderTable();
+    }
+    
+    function populateClassFilter() {
+      const select = document.getElementById('filter-class');
+      select.innerHTML = '<option value="all">All Classes</option>';
+      processedData.classes.forEach(cls => {
+        select.innerHTML += `<option value="${cls}">${cls}</option>`;
+      });
+    }
+    
+    function getFilteredStudents() {
+      let students = [...processedData.students];
+      
+      // Filter by stat card
+      if (currentFilter === 'ontime') {
+        students = students.filter(s => s.totalSevere === 0 && s.slightlyLate === 0);
+      } else if (currentFilter === 'late') {
+        students = students.filter(s => s.totalSevere > 0);
+      } else if (currentFilter === 'critical') {
+        students = students.filter(s => s.totalSevere > 3);
+      }
+      
+      // Filter by class
+      const classFilter = document.getElementById('filter-class').value;
+      if (classFilter !== 'all') {
+        students = students.filter(s => s.class === classFilter);
+      }
+      
+      // Filter by search
+      const search = document.getElementById('search').value.toLowerCase();
+      if (search) {
+        students = students.filter(s => s.name.toLowerCase().includes(search));
+      }
+      
+      // Sort
+      const sortBy = document.getElementById('sort-by').value;
+      students.sort((a, b) => {
+        if (sortBy === 'name') return a.name.localeCompare(b.name);
+        if (sortBy === 'class') return a.class.localeCompare(b.class) || b.totalSevere - a.totalSevere;
+        return b.totalSevere - a.totalSevere;
+      });
+      
+      return students;
+    }
+    
+    function renderTable() {
+      const tbody = document.getElementById('table-body');
+      const students = getFilteredStudents();
+      
+      if (students.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="3" class="no-data">No students found</td></tr>`;
+        return;
+      }
+      
+      let html = '';
+      students.forEach(student => {
+        const isExpanded = expandedRows.has(student.id);
+        const hasDetails = student.details.length > 0;
+        const count = student.totalSevere;
+        const daysAttended = student.totalDays - student.absent - student.excused;
+        
+        let badgeClass = 'zero';
+        if (count > 3) badgeClass = 'high';
+        else if (count > 0) badgeClass = 'medium';
+        
+        html += `
+          <tr class="${hasDetails ? 'clickable-row' : ''}" ${hasDetails ? `onclick="toggleExpand('${student.id}')"` : ''}>
+            <td>
+              <div class="student-name">
+                ${student.name}
+                ${hasDetails ? `<span class="expand-icon">${isExpanded ? '▲' : '▼'}</span>` : ''}
+              </div>
+              <div class="student-class">${student.class}</div>
+            </td>
+            <td style="text-align: right;">
+              <span class="attendance-text">${daysAttended}/${student.totalDays}</span>
+            </td>
+            <td style="text-align: right;">
+              <span class="count-badge ${badgeClass}">${count}</span>
+            </td>
+          </tr>
+        `;
+        
+        if (isExpanded && hasDetails) {
+          html += `
+            <tr class="details-row">
+              <td colspan="3">
+                <div class="details-content">
+                  <div class="details-summary">
+                    ${student.slightlyLate > 0 ? `<span class="summary-tag slight">Slight: ${student.slightlyLate}</span>` : ''}
+                    ${student.moderatelyLate > 0 ? `<span class="summary-tag moderate">Moderate: ${student.moderatelyLate}</span>` : ''}
+                    ${student.veryLate > 0 ? `<span class="summary-tag very-late">Very Late: ${student.veryLate}</span>` : ''}
+                    ${student.absent > 0 ? `<span class="summary-tag absent">Absent: ${student.absent}</span>` : ''}
+                  </div>
+                  <div class="details-grid">
+                    ${student.details.map(d => `
+                      <div class="detail-item ${d.status}">
+                        <span class="detail-date">${d.date}</span>
+                        <span class="detail-time">${d.time || 'N/A'}</span>
+                      </div>
+                    `).join('')}
+                  </div>
+                </div>
+              </td>
+            </tr>
+          `;
+        }
+      });
+      
+      tbody.innerHTML = html;
+    }
+    
+    function renderClassSummary() {
+      const classSummary = processedData.classes.map(cls => {
+        const students = processedData.students.filter(s => s.class === cls);
+        const count = students.length;
+        const studentsWithLateness = students.filter(s => s.totalSevere > 0).length;
+        const latenessPercent = count > 0 ? Math.round((studentsWithLateness / count) * 100) : 0;
+        
+        // Check if primary school (P followed by number)
+        const isPrimary = /^P\d/.test(cls);
+        
+        return { cls, count, studentsWithLateness, latenessPercent, isPrimary };
+      });
+      
+      // Split into primary and secondary
+      const primaryClasses = classSummary.filter(c => c.isPrimary);
+      const secondaryClasses = classSummary.filter(c => !c.isPrimary);
+      
+      // Sort by least students late (best classes first)
+      primaryClasses.sort((a, b) => a.latenessPercent - b.latenessPercent || a.studentsWithLateness - b.studentsWithLateness);
+      secondaryClasses.sort((a, b) => a.latenessPercent - b.latenessPercent || a.studentsWithLateness - b.studentsWithLateness);
+      
+      function renderLeaderboard(classes, tbodyId) {
+        const tbody = document.getElementById(tbodyId);
+        
+        if (classes.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="4" class="no-data">No classes found</td></tr>';
+          return;
+        }
+        
+        tbody.innerHTML = classes.map((c, index) => {
+          const rank = index + 1;
+          let rankClass = '';
+          if (rank === 1) rankClass = 'rank-gold';
+          else if (rank === 2) rankClass = 'rank-silver';
+          else if (rank === 3) rankClass = 'rank-bronze';
+          
+          let badgeClass = 'low';
+          if (c.latenessPercent >= 50) badgeClass = 'high';
+          else if (c.latenessPercent >= 25) badgeClass = 'medium';
+          else if (c.latenessPercent > 0) badgeClass = 'low';
+          else badgeClass = 'zero';
+          
+          return `
+            <tr>
+              <td><span class="rank ${rankClass}">${rank}</span></td>
+              <td><strong>${c.cls}</strong></td>
+              <td style="text-align: right;">${c.count}</td>
+              <td style="text-align: right;">
+                <span class="count-badge ${badgeClass}">${c.studentsWithLateness}</span>
+                <span class="percent-label">(${c.latenessPercent}%)</span>
+              </td>
+            </tr>
+          `;
+        }).join('');
+      }
+      
+      renderLeaderboard(primaryClasses, 'primary-class-body');
+      renderLeaderboard(secondaryClasses, 'secondary-class-body');
+    }
+    
+    function setView(view) {
+      document.querySelectorAll('.view-tab').forEach(t => t.classList.remove('active'));
+      document.querySelector(`.view-tab[data-view="${view}"]`).classList.add('active');
+      
+      if (view === 'students') {
+        document.getElementById('students-view').style.display = 'block';
+        document.getElementById('classes-view').style.display = 'none';
+      } else {
+        document.getElementById('students-view').style.display = 'none';
+        document.getElementById('classes-view').style.display = 'block';
+      }
+    }
+    
+    function toggleExpand(id) {
+      if (expandedRows.has(id)) {
+        expandedRows.delete(id);
+      } else {
+        expandedRows.add(id);
+      }
+      renderTable();
+    }
+    
+    // Event listeners
+    document.getElementById('file-input').addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      
+      Papa.parse(file, {
+        header: true,
+        skipEmptyLines: true,
+        complete: (results) => {
+          processedData = processData(results.data);
+          document.getElementById('upload-section').style.display = 'none';
+          document.getElementById('results').style.display = 'block';
+          renderStats();
+          populateClassFilter();
+          renderTable();
+          renderClassSummary();
+        }
+      });
+    });
+    
+    document.getElementById('sort-by').addEventListener('change', renderTable);
+    document.getElementById('filter-class').addEventListener('change', renderTable);
+    document.getElementById('search').addEventListener('input', renderTable);
+    
+    window.toggleExpand = toggleExpand;
+    window.setFilter = setFilter;
+    window.setView = setView;
+  </script>
+</body>
+</html>
