@@ -5,6 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Attendance Report</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.4/jspdf.plugin.autotable.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
   <style>
     * {
       box-sizing: border-box;
@@ -181,10 +184,16 @@
     .stat-card.critical .stat-value { color: #dc2626; }
     
     /* View Tabs */
+    .view-tabs-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 16px;
+    }
+
     .view-tabs {
       display: flex;
       gap: 4px;
-      margin-bottom: 16px;
       background: #e2e8f0;
       padding: 4px;
       border-radius: 8px;
@@ -232,7 +241,7 @@
       color: #64748b;
     }
     
-    select, .search-input {
+    select {
       padding: 8px 12px;
       border: 1px solid #e2e8f0;
       border-radius: 6px;
@@ -240,20 +249,14 @@
       background: white;
       color: #1a1a2e;
     }
-    
-    select:focus, .search-input:focus {
+
+    select:focus {
       outline: none;
       border-color: #3b82f6;
       box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
     }
     
-    .search-input {
-      flex: 1;
-      min-width: 180px;
-    }
-    
     .print-btn {
-      margin-left: auto;
       padding: 8px 16px;
       background: white;
       border: 1px solid #e2e8f0;
@@ -548,12 +551,9 @@
         width: 100%;
       }
       
-      .control-group select,
-      .search-input {
+      .control-group select {
         flex: 1;
       }
-      
-      .print-btn { display: none; }
       
       th, td {
         padding: 10px 12px;
@@ -572,6 +572,178 @@
       body { background: white; }
       .upload-section, .controls, .print-btn { display: none; }
       .stat-card { border: 1px solid #e2e8f0; }
+    }
+
+    /* Waived Dates */
+    .waived-dates-section {
+      margin-bottom: 24px;
+    }
+
+    .waived-dates-toggle {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      cursor: pointer;
+      user-select: none;
+      padding: 8px 0;
+    }
+
+    .waived-dates-toggle:hover .waived-dates-label {
+      color: #475569;
+    }
+
+    .waived-dates-arrow {
+      font-size: 0.65rem;
+      color: #94a3b8;
+      transition: transform 0.2s;
+    }
+
+    .waived-dates-arrow.expanded {
+      transform: rotate(90deg);
+    }
+
+    .waived-dates-label {
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: #64748b;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+    }
+
+    .waived-dates-hint {
+      font-size: 0.75rem;
+      color: #94a3b8;
+    }
+
+    .waived-dates-count {
+      font-size: 0.7rem;
+      font-weight: 600;
+      color: #dc2626;
+      background: #fef2f2;
+      padding: 2px 8px;
+      border-radius: 10px;
+    }
+
+    .date-chips-wrapper {
+      display: none;
+      padding-top: 8px;
+    }
+
+    .date-chips-wrapper.expanded {
+      display: block;
+    }
+
+    .date-chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+
+    .date-chip {
+      padding: 5px 12px;
+      border-radius: 16px;
+      font-size: 0.75rem;
+      font-weight: 500;
+      border: 1px solid #e2e8f0;
+      background: white;
+      color: #475569;
+      cursor: pointer;
+      transition: all 0.15s;
+      user-select: none;
+    }
+
+    .date-chip:hover {
+      border-color: #cbd5e1;
+      background: #f8fafc;
+    }
+
+    .date-chip.waived {
+      background: #fef2f2;
+      border-color: #fca5a5;
+      color: #dc2626;
+      text-decoration: line-through;
+    }
+
+    .date-chip.waived:hover {
+      background: #fee2e2;
+    }
+
+    /* Status Filter Chips */
+    .status-filter-group {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+
+    .status-filter-group label {
+      font-size: 0.875rem;
+      color: #64748b;
+    }
+
+    .status-chip {
+      padding: 5px 12px;
+      border-radius: 16px;
+      font-size: 0.75rem;
+      font-weight: 500;
+      border: 1px solid #e2e8f0;
+      background: white;
+      color: #64748b;
+      cursor: pointer;
+      transition: all 0.15s;
+      user-select: none;
+    }
+
+    .status-chip:hover {
+      border-color: #cbd5e1;
+    }
+
+    .status-chip.active[data-status="ontime"] {
+      background: #f0fdf4;
+      border-color: #86efac;
+      color: #16a34a;
+    }
+
+    .status-chip.active[data-status="slightly-late"] {
+      background: #f0fdf4;
+      border-color: #86efac;
+      color: #16a34a;
+    }
+
+    .status-chip.active[data-status="moderately-late"] {
+      background: #fefce8;
+      border-color: #fde047;
+      color: #ca8a04;
+    }
+
+    .status-chip.active[data-status="very-late"] {
+      background: #fef2f2;
+      border-color: #fca5a5;
+      color: #dc2626;
+    }
+
+    /* Expand All Toggle */
+    .expand-all-btn {
+      padding: 6px 12px;
+      border: 1px solid #e2e8f0;
+      border-radius: 6px;
+      font-size: 0.8rem;
+      font-weight: 500;
+      background: white;
+      color: #64748b;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .expand-all-btn:hover {
+      background: #f8fafc;
+      border-color: #cbd5e1;
+    }
+
+    .expand-all-btn.active {
+      background: #eff6ff;
+      border-color: #3b82f6;
+      color: #3b82f6;
     }
 
     /* Footer */
@@ -617,14 +789,43 @@
       </header>
       
       <div class="stats-grid" id="stats-grid"></div>
-      
-      <div class="view-tabs">
-        <button class="view-tab active" data-view="students" onclick="setView('students')">Students</button>
-        <button class="view-tab" data-view="classes" onclick="setView('classes')">By Class</button>
+
+      <div class="waived-dates-section" id="waived-dates-section" style="display: none;">
+        <div class="waived-dates-toggle" onclick="toggleDatesSection()">
+          <span class="waived-dates-arrow" id="dates-arrow">&#9654;</span>
+          <span class="waived-dates-label">School Days</span>
+          <span class="waived-dates-hint">Click to manage waived dates</span>
+          <span class="waived-dates-count" id="waived-count" style="display: none;"></span>
+        </div>
+        <div class="date-chips-wrapper" id="date-chips-wrapper">
+          <div class="date-chips" id="date-chips"></div>
+        </div>
+      </div>
+
+      <div class="view-tabs-row">
+        <div class="view-tabs">
+          <button class="view-tab active" data-view="students" onclick="setView('students')">Students</button>
+          <button class="view-tab" data-view="classes" onclick="setView('classes')">By Class</button>
+        </div>
+        <button class="print-btn" id="generate-reports-btn" onclick="generateLatenessReports()">
+          <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+          </svg>
+          Generate Lateness Reports
+        </button>
       </div>
       
       <div id="students-view">
       <div class="controls">
+        <div class="control-group">
+          <label>Level:</label>
+          <select id="filter-level">
+            <option value="all">All Levels</option>
+            <option value="primary">Primary</option>
+            <option value="secondary">Secondary</option>
+            <option value="preu">Pre-U</option>
+          </select>
+        </div>
         <div class="control-group">
           <label>Class:</label>
           <select id="filter-class">
@@ -639,13 +840,14 @@
             <option value="class">Class</option>
           </select>
         </div>
-        <input type="text" class="search-input" id="search" placeholder="Search student...">
-        <button class="print-btn" onclick="window.print()">
-          <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
-          </svg>
-          Print
-        </button>
+        <div class="status-filter-group">
+          <label>Status:</label>
+          <span class="status-chip" data-status="ontime" onclick="toggleStatusFilter(this)">On Time</span>
+          <span class="status-chip" data-status="slightly-late" onclick="toggleStatusFilter(this)">Slightly Late</span>
+          <span class="status-chip" data-status="moderately-late" onclick="toggleStatusFilter(this)">Moderately Late</span>
+          <span class="status-chip" data-status="very-late" onclick="toggleStatusFilter(this)">Very Late</span>
+        </div>
+        <button class="expand-all-btn" id="expand-all-btn" onclick="toggleExpandAll()">Expand All</button>
       </div>
       
       <div class="table-container">
@@ -713,7 +915,7 @@
     </div>
 
     <footer class="footer">
-      Built for Madrasah Wak Tanjong by <a href="https://10kb.co" target="_blank" rel="noopener">10kb</a>
+      Built for Madrasah Wak Tanjong by <a href="https://10kb.co" target="_blank" rel="noopener" style="text-decoration: underline;">10kb.co</a>
     </footer>
   </div>
 
@@ -721,6 +923,12 @@
     let processedData = null;
     let currentFilter = 'all'; // 'all', 'ontime', 'late', 'critical'
     let expandedRows = new Set();
+    let waivedDates = new Set();
+    let allValidDates = [];
+    let rawCsvData = null;
+    let allExpanded = false;
+    let datesExpanded = false;
+    let activeStatusFilters = new Set();
     
     function parseTime(timeStr) {
       if (!timeStr || timeStr.toString().trim().toUpperCase() === 'NA' || timeStr.toString().trim() === '') {
@@ -755,15 +963,15 @@
       return 'on-time';
     }
     
-    function processData(csvData) {
+    function processData(csvData, datesToWaive) {
       if (!csvData || csvData.length === 0) return null;
-      
+
       const headers = Object.keys(csvData[0]);
       const idCol = headers[0];
       const nameCol = headers[1];
       const classCol = headers[2];
       const dateColumns = headers.slice(3);
-      
+
       const holidays = new Set();
       dateColumns.forEach(dateCol => {
         const allNA = csvData.every(row => {
@@ -772,8 +980,8 @@
         });
         if (allNA) holidays.add(dateCol);
       });
-      
-      const validDates = dateColumns.filter(d => !holidays.has(d));
+
+      const validDates = dateColumns.filter(d => !holidays.has(d) && !datesToWaive.has(d));
       
       const students = csvData.map(row => {
         const id = row[idCol];
@@ -861,15 +1069,35 @@
     
     function populateClassFilter() {
       const select = document.getElementById('filter-class');
+      const levelFilter = document.getElementById('filter-level').value;
+      const previousValue = select.value;
       select.innerHTML = '<option value="all">All Classes</option>';
-      processedData.classes.forEach(cls => {
+
+      let classes = processedData.classes;
+      if (levelFilter !== 'all') {
+        classes = classes.filter(cls => getStudentLevel(cls) === levelFilter);
+      }
+
+      classes.forEach(cls => {
         select.innerHTML += `<option value="${cls}">${cls}</option>`;
       });
+
+      // Restore previous selection if still valid
+      if ([...select.options].some(o => o.value === previousValue)) {
+        select.value = previousValue;
+      }
     }
     
+    function getStudentLevel(className) {
+      if (/^P\d/.test(className)) return 'primary';
+      if (/^Secondary/i.test(className)) return 'secondary';
+      if (/^Pre/i.test(className)) return 'preu';
+      return 'other';
+    }
+
     function getFilteredStudents() {
       let students = [...processedData.students];
-      
+
       // Filter by stat card
       if (currentFilter === 'ontime') {
         students = students.filter(s => s.totalSevere === 0 && s.slightlyLate === 0);
@@ -878,19 +1106,30 @@
       } else if (currentFilter === 'critical') {
         students = students.filter(s => s.totalSevere > 3);
       }
-      
+
+      // Filter by level
+      const levelFilter = document.getElementById('filter-level').value;
+      if (levelFilter !== 'all') {
+        students = students.filter(s => getStudentLevel(s.class) === levelFilter);
+      }
+
       // Filter by class
       const classFilter = document.getElementById('filter-class').value;
       if (classFilter !== 'all') {
         students = students.filter(s => s.class === classFilter);
       }
-      
-      // Filter by search
-      const search = document.getElementById('search').value.toLowerCase();
-      if (search) {
-        students = students.filter(s => s.name.toLowerCase().includes(search));
+
+      // Filter by lateness status (multi-select)
+      if (activeStatusFilters.size > 0) {
+        students = students.filter(s => {
+          if (activeStatusFilters.has('ontime') && s.totalSevere === 0 && s.slightlyLate === 0) return true;
+          if (activeStatusFilters.has('slightly-late') && s.slightlyLate > 0) return true;
+          if (activeStatusFilters.has('moderately-late') && s.moderatelyLate > 0) return true;
+          if (activeStatusFilters.has('very-late') && s.veryLate > 0) return true;
+          return false;
+        });
       }
-      
+
       // Sort
       const sortBy = document.getElementById('sort-by').value;
       students.sort((a, b) => {
@@ -898,7 +1137,7 @@
         if (sortBy === 'class') return a.class.localeCompare(b.class) || b.totalSevere - a.totalSevere;
         return b.totalSevere - a.totalSevere;
       });
-      
+
       return students;
     }
     
@@ -913,7 +1152,7 @@
       
       let html = '';
       students.forEach(student => {
-        const isExpanded = expandedRows.has(student.id);
+        const isExpanded = allExpanded || expandedRows.has(student.id);
         const hasDetails = student.details.length > 0;
         const count = student.totalSevere;
         const daysAttended = student.totalDays - student.absent - student.excused;
@@ -1051,6 +1290,80 @@
       renderTable();
     }
     
+    function initValidDates(csvData) {
+      const headers = Object.keys(csvData[0]);
+      const dateColumns = headers.slice(3);
+
+      const holidays = new Set();
+      dateColumns.forEach(dateCol => {
+        const allNA = csvData.every(row => {
+          const val = row[dateCol];
+          return !val || val.toString().trim().toUpperCase() === 'NA' || val.toString().trim() === '';
+        });
+        if (allNA) holidays.add(dateCol);
+      });
+
+      allValidDates = dateColumns.filter(d => !holidays.has(d));
+    }
+
+    function renderDateChips() {
+      const container = document.getElementById('date-chips');
+      container.innerHTML = allValidDates.map(date => {
+        const isWaived = waivedDates.has(date);
+        return `<span class="date-chip ${isWaived ? 'waived' : ''}" onclick="toggleWaivedDate('${date}')">${date}</span>`;
+      }).join('');
+      document.getElementById('waived-dates-section').style.display = 'block';
+
+      // Update waived count badge
+      const countEl = document.getElementById('waived-count');
+      if (waivedDates.size > 0) {
+        countEl.textContent = `${waivedDates.size} waived`;
+        countEl.style.display = 'inline';
+      } else {
+        countEl.style.display = 'none';
+      }
+    }
+
+    function toggleDatesSection() {
+      datesExpanded = !datesExpanded;
+      document.getElementById('date-chips-wrapper').classList.toggle('expanded', datesExpanded);
+      document.getElementById('dates-arrow').classList.toggle('expanded', datesExpanded);
+    }
+
+    function toggleStatusFilter(el) {
+      const status = el.dataset.status;
+      if (activeStatusFilters.has(status)) {
+        activeStatusFilters.delete(status);
+        el.classList.remove('active');
+      } else {
+        activeStatusFilters.add(status);
+        el.classList.add('active');
+      }
+      renderTable();
+    }
+
+    function toggleExpandAll() {
+      allExpanded = !allExpanded;
+      const btn = document.getElementById('expand-all-btn');
+      btn.classList.toggle('active', allExpanded);
+      btn.textContent = allExpanded ? 'Collapse All' : 'Expand All';
+      renderTable();
+    }
+
+    function toggleWaivedDate(date) {
+      if (waivedDates.has(date)) {
+        waivedDates.delete(date);
+      } else {
+        waivedDates.add(date);
+      }
+      processedData = processData(rawCsvData, waivedDates);
+      renderDateChips();
+      renderStats();
+      populateClassFilter();
+      renderTable();
+      renderClassSummary();
+    }
+
     // Event listeners
     function handleFile(file) {
       if (!file || !file.name.endsWith('.csv')) return;
@@ -1059,9 +1372,13 @@
         header: true,
         skipEmptyLines: true,
         complete: (results) => {
-          processedData = processData(results.data);
+          rawCsvData = results.data;
+          waivedDates = new Set();
+          initValidDates(rawCsvData);
+          processedData = processData(rawCsvData, waivedDates);
           document.getElementById('upload-section').style.display = 'none';
           document.getElementById('results').style.display = 'block';
+          renderDateChips();
           renderStats();
           populateClassFilter();
           renderTable();
@@ -1094,13 +1411,213 @@
       handleFile(file);
     });
     
+    document.getElementById('filter-level').addEventListener('change', () => {
+      populateClassFilter();
+      renderTable();
+    });
     document.getElementById('sort-by').addEventListener('change', renderTable);
     document.getElementById('filter-class').addEventListener('change', renderTable);
-    document.getElementById('search').addEventListener('input', renderTable);
-    
+
+
+    async function generateLatenessReports() {
+      if (!processedData) return;
+
+      const btn = document.getElementById('generate-reports-btn');
+      const originalText = btn.innerHTML;
+      btn.innerHTML = `
+        <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+        </svg>
+        Generating...`;
+      btn.disabled = true;
+
+      try {
+        // Group students by class
+        const classBuckets = {};
+        processedData.students.forEach(s => {
+          if (!classBuckets[s.class]) classBuckets[s.class] = [];
+          classBuckets[s.class].push(s);
+        });
+
+        const zip = new JSZip();
+        let pdfCount = 0;
+
+        const sortedClasses = Object.keys(classBuckets).sort();
+        for (const className of sortedClasses) {
+          const students = classBuckets[className];
+          // Filter to students with moderate or very late records
+          const lateStudents = students.filter(s => s.moderatelyLate > 0 || s.veryLate > 0);
+          if (lateStudents.length === 0) continue;
+
+          // Sort by total severe descending
+          lateStudents.sort((a, b) => b.totalSevere - a.totalSevere);
+
+          const { jsPDF } = window.jspdf;
+          const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+          const pageWidth = doc.internal.pageSize.getWidth();
+          const margin = 14;
+          let y = margin;
+
+          // Header
+          doc.setFontSize(14);
+          doc.setFont(undefined, 'bold');
+          doc.text('Madrasah Wak Tanjong Al-Islamiah', pageWidth / 2, y, { align: 'center' });
+          y += 7;
+
+          doc.setFontSize(12);
+          doc.text('Lateness Report', pageWidth / 2, y, { align: 'center' });
+          y += 7;
+
+          doc.setFontSize(10);
+          doc.setFont(undefined, 'normal');
+          doc.text(`Class: ${className}`, pageWidth / 2, y, { align: 'center' });
+          y += 6;
+
+          doc.setFontSize(9);
+          doc.setTextColor(100);
+          doc.text(`${processedData.validDays} school days  |  Generated: ${new Date().toLocaleDateString('en-SG', { day: 'numeric', month: 'short', year: 'numeric' })}`, pageWidth / 2, y, { align: 'center' });
+          doc.setTextColor(0);
+          y += 8;
+
+          // Summary table
+          const tableBody = lateStudents.map(s => [
+            s.name,
+            s.moderatelyLate.toString(),
+            s.veryLate.toString(),
+            s.totalSevere.toString()
+          ]);
+
+          doc.autoTable({
+            startY: y,
+            head: [['Student Name', 'Moderately Late', 'Very Late', 'Total']],
+            body: tableBody,
+            margin: { left: margin, right: margin },
+            styles: { fontSize: 9, cellPadding: 3 },
+            headStyles: { fillColor: [59, 130, 246], textColor: 255, fontStyle: 'bold' },
+            columnStyles: {
+              0: { cellWidth: 'auto' },
+              1: { halign: 'center', cellWidth: 30 },
+              2: { halign: 'center', cellWidth: 25 },
+              3: { halign: 'center', cellWidth: 20, fontStyle: 'bold' }
+            }
+          });
+
+          y = doc.lastAutoTable.finalY + 10;
+
+          // Detail section per student
+          for (const student of lateStudents) {
+            const lateDetails = student.details.filter(d =>
+              d.status === 'moderately-late' || d.status === 'very-late'
+            );
+            if (lateDetails.length === 0) continue;
+
+            // Check if we need a new page (rough estimate: header + at least a few rows)
+            if (y > doc.internal.pageSize.getHeight() - 40) {
+              doc.addPage();
+              y = margin;
+            }
+
+            doc.setFontSize(9);
+            doc.setFont(undefined, 'bold');
+            doc.text(`${student.name}`, margin, y);
+            y += 1;
+
+            const detailRows = lateDetails.map(d => {
+              const label = d.status === 'very-late' ? 'Very Late' : 'Moderately Late';
+              return [d.date, d.time || '-', label];
+            });
+
+            doc.autoTable({
+              startY: y,
+              head: [['Date', 'Time', 'Status']],
+              body: detailRows,
+              margin: { left: margin + 2, right: margin },
+              styles: { fontSize: 8, cellPadding: 2 },
+              headStyles: { fillColor: [241, 245, 249], textColor: [71, 85, 105], fontStyle: 'bold' },
+              columnStyles: {
+                0: { cellWidth: 35 },
+                1: { cellWidth: 25 },
+                2: { cellWidth: 'auto' }
+              },
+              didParseCell: function(data) {
+                if (data.section === 'body' && data.column.index === 2) {
+                  if (data.cell.raw === 'Very Late') {
+                    data.cell.styles.textColor = [220, 38, 38];
+                  } else {
+                    data.cell.styles.textColor = [202, 138, 4];
+                  }
+                }
+              }
+            });
+
+            y = doc.lastAutoTable.finalY + 6;
+          }
+
+          // Add "Report Powered by 10kb.co" footer on every page
+          const totalPages = doc.internal.getNumberOfPages();
+          for (let i = 1; i <= totalPages; i++) {
+            doc.setPage(i);
+            const pageHeight = doc.internal.pageSize.getHeight();
+            doc.setFontSize(8);
+            doc.setFont(undefined, 'normal');
+            const prefix = 'Report Powered by ';
+            const linkText = '10kb.co';
+            const prefixWidth = doc.getTextWidth(prefix);
+            doc.setFont(undefined, 'bold');
+            const linkWidth = doc.getTextWidth(linkText);
+            doc.setFont(undefined, 'normal');
+            const totalWidth = prefixWidth + linkWidth;
+            const footerX = (pageWidth - totalWidth) / 2;
+            const footerY = pageHeight - 10;
+            doc.setTextColor(150);
+            doc.text(prefix, footerX, footerY);
+            doc.setTextColor(37, 99, 235);
+            doc.setFont(undefined, 'bold');
+            const linkX = footerX + prefixWidth;
+            doc.text(linkText, linkX, footerY);
+            doc.setDrawColor(37, 99, 235);
+            doc.setLineWidth(0.3);
+            doc.line(linkX, footerY + 0.5, linkX + linkWidth, footerY + 0.5);
+            doc.link(linkX, footerY - 3, linkWidth, 4, { url: 'https://10kb.co' });
+          }
+
+          const pdfBlob = doc.output('blob');
+          const safeName = className.replace(/[^a-zA-Z0-9-_ ]/g, '').replace(/\s+/g, '_');
+          zip.file(`Lateness_Report_${safeName}.pdf`, pdfBlob);
+          pdfCount++;
+        }
+
+        if (pdfCount === 0) {
+          alert('No classes have students with moderate or very late records.');
+          return;
+        }
+
+        const zipBlob = await zip.generateAsync({ type: 'blob' });
+        const url = URL.createObjectURL(zipBlob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'Lateness_Reports.zip';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      } catch (err) {
+        console.error('Error generating reports:', err);
+        alert('Error generating reports. Check the console for details.');
+      } finally {
+        btn.innerHTML = originalText;
+        btn.disabled = false;
+      }
+    }
+
     window.toggleExpand = toggleExpand;
     window.setFilter = setFilter;
     window.setView = setView;
+    window.toggleWaivedDate = toggleWaivedDate;
+    window.toggleDatesSection = toggleDatesSection;
+    window.toggleExpandAll = toggleExpandAll;
+    window.toggleStatusFilter = toggleStatusFilter;
+    window.generateLatenessReports = generateLatenessReports;
   </script>
 </body>
 </html>
